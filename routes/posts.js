@@ -1,5 +1,6 @@
 const router = require("express").Router();
 const authorization = require("../middlewares/authorization");
+const { createPostValidation } = require("../middlewares/validations");
 const Post = require("../models/postModel");
 const { validateObjectId } = require("../utils/validateObjectId");
 
@@ -16,7 +17,7 @@ router.get("/", async (req, res) => {
 });
 
 //create a new post
-router.post("/new", authorization, async (req, res) => {
+router.post("/new", createPostValidation, authorization, async (req, res) => {
   try {
     //   1. destructure the post_content from req.body
     const { user_id, post_content } = req.body;

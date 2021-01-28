@@ -37,3 +37,21 @@ module.exports.userLoginValidation = async (req, res, next) => {
     });
   }
 };
+
+//create post validation of all fields
+module.exports.createPostValidation = async (req, res, next) => {
+  try {
+    const { post_content } = req.body;
+
+    if (!post_content) {
+      res.status(422).json({ error: "post_content field cannot be blank" });
+    }
+    {
+      next();
+    }
+  } catch (err) {
+    res.status(500).json({
+      error: err.message,
+    });
+  }
+};
