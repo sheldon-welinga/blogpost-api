@@ -130,7 +130,117 @@ router.patch("/reset-password", userLoginValidation, async (req, res) => {
 
 router.patch("/follow", async (req, res) => {
   try {
-    const { user_id } = req.body;
+    // destructure the user id(The one to follow another) and follower_id (The one to be followed) from req.body
+    const { user_id, follower_id } = req.body;
+
+    if (user_id === follower_id) {
+      res.status(504).json({ error: "User's cant follow themselves" });
+    } else {
+      const user = await User.findById({ _id: user_id });
+
+      if (!user) {
+        res.status(404).json({
+          error: "User doen't exist",
+        });
+      } else {
+        const followerUser = await User.findById({ _id: follower_id });
+
+        if (!followerUser) {
+          res
+            .status(422)
+            .json({ error: "The user you are trying to follow doesn't exist" });
+        } else {
+          //check if user is already following the other party
+          const is_following = await user.following.find(
+            (followerid) => followerid == follower_id
+          );
+
+          if (is_following) {
+            res.status(409).json({
+              error: "You are already following the user",
+            });
+          } else {
+            //update the records of the follower under the users following
+            user.following = [...user.following, follower_id];
+
+            //update the records for the follower under their followers
+            followerUser.followers = [...followerUser.followers, user_id];
+
+            await user.save();
+
+            await await followerUser.save();
+
+            res.status(200).json(user);
+          }
+        }
+      }
+    }
+  } catch (err) {
+    res.status(500).json({
+      error: err.message,
+    });
+  }
+});
+
+router.patch("/unfollow", async (req, res) => {
+  try {
+    // destructure the user id(The current user following another) and follower_id (The one who is being followed) from req.body
+    const { user_id, follower_id } = req.body;
+
+    if (user_id === follower_id) {
+      res.status(504).json({
+        error: "User's can't unfollow themselves",
+      });
+    } else {
+      const user = await User.findById({ _id: user_id });
+
+      if (!user) {
+        res.status(404).json({
+          error: "User doen't exist",
+        });
+      } else {
+        const followerUser = await User.findById({ _id: follower_id });
+
+        if (!followerUser) {
+          res
+            .status(422)
+            .json({
+              error: "The user you are trying to unfollow doesn't exist",
+            });
+        } else {
+          //check if user is already following the other party
+          const is_following = await user.following.find(
+            (followerid) => followerid == follower_id
+          );
+
+          if (!is_following) {
+            res.status(409).json({
+              error: "You are trying to unfollow a user you aren't following!",
+            });
+          } else {
+            //update the records of the follower under the users following
+            const user_following = user.following.filter(
+              (followerid) => followerid != follower_id
+            );
+
+            //update the records for the follower under their followers
+            const follower_followers = followerUser.followers.filter(
+              (userid) => userid != user_id
+            );
+
+            user.following = user_following;
+
+            followerUser.followers = follower_followers;
+
+            await user.save();
+
+            await await followerUser.save();
+
+            res.status(200).json(user);
+          }
+        }
+      }
+    }
   } catch (err) {
     res.status(500).json({
       error: err.message,
