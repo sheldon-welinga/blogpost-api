@@ -1,5 +1,7 @@
 const router = require("express").Router();
+const authorization = require("../middlewares/authorization");
 const Post = require("../models/postModel");
+const { validateObjectId } = require("../utils/validateObjectId");
 
 router.get("/", async (req, res) => {
   try {
@@ -14,14 +16,14 @@ router.get("/", async (req, res) => {
 });
 
 //create a new post
-router.post("/new", async (req, res) => {
+router.post("/new", authorization, async (req, res) => {
   try {
-    //   1. destructure the name, message from req.body
-    const { posted_by, post_content } = req.body;
+    //   1. destructure the post_content from req.body
+    const { user_id, post_content } = req.body;
 
     //2. create a new post
     const newPost = new Post({
-      posted_by,
+      posted_by: user_id,
       post_content,
     });
 
@@ -29,6 +31,7 @@ router.post("/new", async (req, res) => {
 
     res.status(201).json({
       message: "Post created successfully",
+      post_id: newPost._id,
     });
   } catch (err) {
     res.status(500).json({
@@ -38,37 +41,44 @@ router.post("/new", async (req, res) => {
 });
 
 //like a post
-router.patch("/like", async (req, res) => {
+router.patch("/:post_id/like", authorization, async (req, res) => {
   try {
-    //1. destructure the id(user liking id) and post_id (post to be liked id) from req.body
-    const { id, post_id } = req.body;
+    //1. destructure the user_id(user liking id) from req.body and
+    // post_id (post to be liked id) from req.params
+    const { user_id } = req.body;
+    const { post_id } = req.params;
 
-    //check if the user exists
-    const post = await Post.findById({ _id: post_id });
+    //2. validate the post id
+    if (validateObjectId(post_id)) {
+      //3. check if the post to be liked exists exists
+      const post = await Post.findById({ _id: post_id });
 
-    if (!post) {
-      res.status(404).json({ error: "The post doesn't exist" });
-    } else {
-      //check if the user has already liked the post
-      const is_liked = post.likes.find((postid) => postid == id);
-
-      if (is_liked) {
-        res.status(409).json({
-          error: "User already liked the post",
-        });
+      if (!post) {
+        res.status(404).json({ error: "The post doesn't exist!" });
       } else {
-        //add a new like if not liked
-        const addLikes = [...post.likes, id];
+        //check if the user has already liked the post
 
-        post.likes = addLikes;
+        const is_liked = post.likes.find(
+          (post_user_id) => post_user_id == user_id
+        );
 
-        post.save();
+        if (is_liked) {
+          res.status(409).json({
+            error: "You already liked the post",
+          });
+        } else {
+          //update the new like if for the post if not liked
+          post.likes = [...post.likes, user_id];
 
-        res.status(200).json({
-          message: "You successfully liked the post",
-        });
-        //get the post to like
+          post.save();
+
+          res.status(200).json({
+            message: "You successfully liked the post",
+          });
+        }
       }
+    } else {
+      res.status(406).json({ error: "Invalid post_id" });
     }
   } catch (err) {
     res.status(500).json({
@@ -78,36 +88,45 @@ router.patch("/like", async (req, res) => {
 });
 
 //unlike a post
-router.patch("/unlike", async (req, res) => {
+router.patch("/:post_id/unlike", authorization, async (req, res) => {
   try {
-    //1. destructure the id(user unliking id) and post_id (post to be unliked id) from req.body
-    const { id, post_id } = req.body;
+    //1. destructure the user_id(user unliking id) from req.body and
+    // post_id (post to be unliked id) from req.params
+    const { user_id } = req.body;
+    const { post_id } = req.params;
 
-    //check if the user exists
-    const post = await Post.findById({ _id: post_id });
+    //2. validate the post id
+    if (validateObjectId(post_id)) {
+      //check if the post exists
+      const post = await Post.findById({ _id: post_id });
 
-    if (!post) {
-      res.status(404).json({ error: "The post doesn't exist" });
-    } else {
-      //check if the user has already liked the post
-      const is_liked = await post.likes.find((postid) => postid == id);
-
-      if (is_liked) {
-        //remove a like if liked
-        const removeLikes = await post.likes.filter((postid) => postid != id);
-
-        post.likes = removeLikes;
-
-        post.save();
-
-        res.status(200).json({
-          message: "You successfully unliked the post",
-        });
+      if (!post) {
+        res.status(404).json({ error: "The post doesn't exist" });
       } else {
-        res.status(409).json({
-          error: "User has not liked the post",
-        });
+        //check if the user has already liked the post
+        const is_liked = await post.likes.find(
+          (post_user_id) => post_user_id == user_id
+        );
+
+        if (is_liked) {
+          //remove a like if liked
+          post.likes = post.likes.filter(
+            (post_user_id) => post_user_id != user_id
+          );
+
+          post.save();
+
+          res.status(200).json({
+            message: "You successfully unliked the post!",
+          });
+        } else {
+          res.status(409).json({
+            error: "You have not liked the post yet!",
+          });
+        }
       }
+    } else {
+      res.status(406).json({ error: "Invalid post_id" });
     }
   } catch (err) {
     res.status(500).json({
@@ -117,20 +136,27 @@ router.patch("/unlike", async (req, res) => {
 });
 
 //delete a post
-router.delete("/delete/:post_id", async (req, res) => {
+router.delete("/:post_id/delete", authorization, async (req, res) => {
   try {
+    //1. destructure the post id from req.params
     const { post_id } = req.params;
 
-    const post = await Post.findById({ _id: post_id });
+    //2. check if valid object id
+    if (validateObjectId(post_id)) {
+      const post = await Post.findById({ _id: post_id });
 
-    if (!post) {
-      res.status(404).json({ error: "The post doesn't exist!" });
+      if (!post) {
+        res.status(404).json({ error: "The post doesn't exist!" });
+      } else {
+        //3. delete the post from the database
+        await post.remove();
+
+        res.status(200).json({
+          message: "Post deleted successfully!",
+        });
+      }
     } else {
-      await post.remove();
-
-      res.status(200).json({
-        message: "Post deleted successfully!",
-      });
+      res.status(406).json({ error: "Invalid post_id" });
     }
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -138,33 +164,37 @@ router.delete("/delete/:post_id", async (req, res) => {
 });
 
 //comment on a post
-router.patch("/comment", async (req, res) => {
+router.patch("/:post_id/comment", authorization, async (req, res) => {
   try {
-    //destructure the message, post_id and comment_by (user id commenting) from req.body
-    const { message, comment_by, post_id } = req.body;
+    //1. destructure the message and user_id (user id commenting) from req.body and
+    // post_id from req.params
+    const { message, user_id } = req.body;
+    const { post_id } = req.params;
 
-    const post = await Post.findById({ _id: post_id });
+    //check if valid object id
+    if (validateObjectId(post_id)) {
+      const post = await Post.findById({ _id: post_id });
 
-    if (!post) {
-      res.status(404).json({
-        error: "The post doesn't exist",
-      });
+      if (!post) {
+        res.status(404).json({
+          error: "The post doesn't exist",
+        });
+      } else {
+        const newComment = {
+          message,
+          comment_by: user_id,
+        };
+
+        post.comments = [...post.comments, newComment];
+
+        post.save();
+
+        res.status(200).json({
+          message: "Comment posted successfully",
+        });
+      }
     } else {
-      const { comments } = await post;
-
-      const newComment = {
-        message,
-        comment_by,
-        comment_at: Date.now(),
-      };
-
-      post.comments = [...comments, newComment];
-
-      post.save();
-
-      res.status(200).json({
-        message: "Comment posted successfully",
-      });
+      res.status(406).json({ error: "Invalid post_id" });
     }
   } catch (err) {
     res.status(500).json({ error: err.message });
