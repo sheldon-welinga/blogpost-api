@@ -3,7 +3,7 @@
 The following is a blogpost rest api that allows users to register, login, create posts, like posts, unlike posts, create comments, follow other users, unfollow other users
 
 The common path for all the links is
-![Open the App](https://blogspost-api.herokuapp.com/api/v1)
+[Open the App](https://blogspost-api.herokuapp.com/api/v1)
 
 ## SETUP
 
