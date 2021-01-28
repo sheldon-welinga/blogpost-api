@@ -135,17 +135,7 @@ router.patch("/reset-password", userLoginValidation, async (req, res) => {
 //get all users
 router.get("/", authorization, async (req, res) => {
   try {
-    let users = await User.find();
-
-    users = users.map((user) => {
-      const single_user = {
-        user_id: user._id,
-        name: user.name,
-        email: user.email,
-      };
-
-      return single_user;
-    });
+    const users = await User.find().select("_id name email");
 
     res.status(200).json(users);
   } catch (err) {
@@ -167,14 +157,18 @@ router.patch("/:follower_id/follow", authorization, async (req, res) => {
       if (user_id === follower_id) {
         res.status(504).json({ error: "User's cant follow themselves" });
       } else {
-        const user = await User.findById({ _id: user_id });
+        const user = await User.findById({ _id: user_id }).select(
+          "followers following"
+        );
 
         if (!user) {
           res.status(404).json({
             error: "User doen't exist",
           });
         } else {
-          const followerUser = await User.findById({ _id: follower_id });
+          const followerUser = await User.findById({ _id: follower_id }).select(
+            "followers following"
+          );
 
           if (!followerUser) {
             res.status(422).json({
@@ -201,7 +195,9 @@ router.patch("/:follower_id/follow", authorization, async (req, res) => {
 
               await await followerUser.save();
 
-              res.status(200).json(user);
+              res.status(200).json({
+                message: "You have successfully followed the user!",
+              });
             }
           }
         }
@@ -230,14 +226,18 @@ router.patch("/:follower_id/unfollow", authorization, async (req, res) => {
           error: "User's can't unfollow themselves",
         });
       } else {
-        const user = await User.findById({ _id: user_id });
+        const user = await User.findById({ _id: user_id }).select(
+          "following followers"
+        );
 
         if (!user) {
           res.status(404).json({
             error: "User doen't exist",
           });
         } else {
-          const followerUser = await User.findById({ _id: follower_id });
+          const followerUser = await User.findById({ _id: follower_id }).select(
+            "followers following"
+          );
 
           if (!followerUser) {
             res.status(422).json({
@@ -273,7 +273,9 @@ router.patch("/:follower_id/unfollow", authorization, async (req, res) => {
 
               await await followerUser.save();
 
-              res.status(200).json(user);
+              res.status(200).json({
+                message: "You successfully unfollowed the user!",
+              });
             }
           }
         }

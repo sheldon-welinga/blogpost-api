@@ -7,7 +7,7 @@ const { validateObjectId } = require("../utils/validateObjectId");
 //get all posts
 router.get("/", async (req, res) => {
   try {
-    const posts = await Post.find();
+    const posts = await Post.find({}, { __v: 0 }).sort({ created_at: -1 });
 
     res.status(200).json(posts);
   } catch (err) {
