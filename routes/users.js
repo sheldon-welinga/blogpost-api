@@ -53,6 +53,7 @@ router.post("/register", userRegisterValidation, async (req, res) => {
   }
 });
 
+//login a user
 router.post("/login", userLoginValidation, async (req, res) => {
   try {
     //1. destructure the email and password from req.body
@@ -90,6 +91,7 @@ router.post("/login", userLoginValidation, async (req, res) => {
   }
 });
 
+//reset a users password
 router.patch("/reset-password", userLoginValidation, async (req, res) => {
   try {
     //1. destructure the email and new password from the req.body
@@ -130,6 +132,30 @@ router.patch("/reset-password", userLoginValidation, async (req, res) => {
   }
 });
 
+//get all users
+router.get("/", authorization, async (req, res) => {
+  try {
+    let users = await User.find();
+
+    users = users.map((user) => {
+      const single_user = {
+        user_id: user._id,
+        name: user.name,
+        email: user.email,
+      };
+
+      return single_user;
+    });
+
+    res.status(200).json(users);
+  } catch (err) {
+    res.status(500).json({
+      error: err.message,
+    });
+  }
+});
+
+//follow a user
 router.patch("/:follower_id/follow", authorization, async (req, res) => {
   try {
     // destructure the user_id(The one to follow another) from req.body and
@@ -190,6 +216,7 @@ router.patch("/:follower_id/follow", authorization, async (req, res) => {
   }
 });
 
+//unfollow a user
 router.patch("/:follower_id/unfollow", authorization, async (req, res) => {
   try {
     // destructure the user id(The current user following another)  from req.body

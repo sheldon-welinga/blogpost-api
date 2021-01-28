@@ -3,7 +3,7 @@
 The following is a blogpost rest api that allows users to register, login, create posts, like posts, unlike posts, create comments, follow other users, unfollow other users
 
 The common path for all the links is
-[Open the App](https://blogspost-api.herokuapp.com/api/v1)
+[Open the App](https://blogspost-api.herokuapp.com/api/v1).
 
 ## SETUP
 
@@ -47,6 +47,10 @@ PATH: **/users/reset-password**
 The following are need to reset a user password
 -email
 -password
+
+#### GET ALL USERS
+
+PATH: **/users/**
 
 #### FOLLOW A USER
 

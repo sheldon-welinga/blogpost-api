@@ -4,6 +4,7 @@ const { createPostValidation } = require("../middlewares/validations");
 const Post = require("../models/postModel");
 const { validateObjectId } = require("../utils/validateObjectId");
 
+//get all posts
 router.get("/", async (req, res) => {
   try {
     const posts = await Post.find();
